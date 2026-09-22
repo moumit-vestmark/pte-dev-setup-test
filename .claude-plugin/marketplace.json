@@ -1,0 +1,12 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "pte-dev-setup-test",
+  "description": "TEMP test marketplace for the PTE dev-environment setup plugin (VEST-114655)",
+  "owner": { "name": "Moumit Bhattacharjee" },
+  "plugins": [
+    { "name": "pte-dev-setup",
+      "description": "Set up a Linux machine for PTE development end to end",
+      "source": "./plugins/pte-dev-setup",
+      "version": "0.1.0" }
+  ]
+}
