@@ -54,7 +54,7 @@ checkout** (`cd ~/dev/vestmarkone && claude`, then `/setup-java-lsp`, `/mcp` →
 ### What stays manual (browser or organizational)
 
 - The bootstrap above (Claude Code, AWS SSO, GitHub) and Glean's OAuth via `/mcp`
-- Creating the four API tokens and typing them with `read -rs` — `tokens.md` has the click path for each
+- Creating the four API tokens and typing them with `read -rp` — `tokens.md` has the click path for each
 - Slack channels, IntelliJ, a SQL client, HR/IT accounts
 
 ## Environment variables
@@ -74,8 +74,8 @@ checkout** (`cd ~/dev/vestmarkone && claude`, then `/setup-java-lsp`, `/mcp` →
 |---|---|---|
 | `NODE_EXTRA_CA_CERTS`, `UV_SYSTEM_CERTS` | system bundle, `1` | Claude Code and `uv` behind Zscaler |
 | `ATLASSIAN_BASE_URL`, `ATLASSIAN_USER` | `https://vestmark.atlassian.net`, your git email | Jira/Confluence skills |
-| `BITBUCKET_URL`, `BITBUCKET_PROJECT`, `BITBUCKET_REPO`, `BITBUCKET_USER` | server, `PROD`, `vestmarkone`, your login | Bitbucket skills + git over HTTPS |
-| `JENKINS_BASE_URL`, `JENKINS_USER` | server, your login | Jenkins skills |
+| `BITBUCKET_URL`, `BITBUCKET_PROJECT`, `BITBUCKET_REPO`, `BITBUCKET_USER` | server, `PROD`, `vestmarkone`, your email local-part (always the Bitbucket username) | Bitbucket skills + git over HTTPS |
+| `JENKINS_BASE_URL`, `JENKINS_USER` | server, your email local-part | Jenkins skills |
 | `SONARQUBE_URL` | server | sonarqube MCP + skills |
 | `MSSQL_SERVER/PORT/USER/DATABASE/PASSWORD` | `localhost`, `1433`, `sa`, `vmap`, `startupSaPassword` from `gradle.properties` | `pte-mssql` MCP (local docker SQL Server only) |
 | token aliases | `BITBUCKET_TOKEN` ↔ `BITBUCKET_ACCESS_TOKEN`, `JENKINS_TOKEN` ↔ `JENKINS_ACCESS_TOKEN` | old and new skill variable names both work |
@@ -88,7 +88,7 @@ in place.
 
 Secrets go in `~/.pte-tokens` (mode 600), sourced by the `~/.bashrc` block. Claude walks you
 through the missing ones one at a time from `tokens.md` — where to click, which permissions, then
-a single `read -rs` line to run in a real terminal so the value never enters the chat — and
+a single `read -rp` line to run in a real terminal so the value never enters the chat — and
 verifies each with `check.sh --probe` before moving on.
 
 | Token | Create it at | Notes |

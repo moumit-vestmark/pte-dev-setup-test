@@ -42,7 +42,9 @@ note() { echo "   note: $*"; }
 # shellcheck disable=SC1091
 [[ -f "$HOME/.pte-tokens" ]] && . "$HOME/.pte-tokens"
 export BITBUCKET_TOKEN="${BITBUCKET_TOKEN:-${BITBUCKET_ACCESS_TOKEN:-}}"
-export BITBUCKET_USER="${BB_LOGIN:-${BITBUCKET_USER:-${USER:-$(whoami)}}}"
+# Bitbucket usernames are always the local part of the Vestmark email; the Linux login is a last resort.
+EMAIL_LOCAL="$(git config --global user.email 2>/dev/null | cut -d@ -f1)"
+export BITBUCKET_USER="${BB_LOGIN:-${BITBUCKET_USER:-${EMAIL_LOCAL:-${USER:-$(whoami)}}}}"
 
 REPO_ROOT="${REPO_ARG:-${PTE_REPO:-${DEV_HOME:-$HOME/dev}/vestmarkone}}"
 BITBUCKET_HOST="https://bitbucket.vestmarkeng.com"

@@ -1,8 +1,8 @@
 # Tokens and logins — step-by-step
 
 Claude walks the user through these **one at a time**: show one section, wait for "Done", verify,
-then show the next. Every secret is typed into the user's own terminal with `read -rs` (nothing is
-echoed, nothing lands in shell history or in the chat) and appended to `~/.pte-tokens`, which the
+then show the next. Every secret is typed into the user's own terminal with `read -rp` (the value is shown as you paste, so you can see it landed
+intact; it never enters shell history or the chat) and appended to `~/.pte-tokens`, which the
 `~/.bashrc` tooling block sources. Run this once before the first token:
 
 ```bash
@@ -74,18 +74,18 @@ Pairs with `ATLASSIAN_USER` = your Vestmark email (set automatically from your g
    the skills authenticate with basic auth against the REST API
 3. Label: `pte-claude-skills` · Expiry: the longest offered (max 1 year) → **Create**
 4. Click **Copy** — the token is shown exactly once
-5. In your terminal, paste when prompted (nothing will appear as you paste), then Enter:
+5. In your terminal, paste when prompted, check it looks right, then Enter:
 
 ```bash
-read -rsp 'ATLASSIAN_TOKEN: ' ATLASSIAN_TOKEN; echo; printf 'export ATLASSIAN_TOKEN=%q\n' "$ATLASSIAN_TOKEN" >> ~/.pte-tokens
+read -rp 'ATLASSIAN_TOKEN: ' ATLASSIAN_TOKEN; printf 'export ATLASSIAN_TOKEN=%q\n' "$ATLASSIAN_TOKEN" >> ~/.pte-tokens
 ```
 
 ---
 
 ## `BITBUCKET_TOKEN` — Bitbucket REST **and** git push/pull
 
-Pairs with `BITBUCKET_USER` = your Bitbucket username (defaults to your Linux login; check it
-under **Manage account → Account settings → Username** and tell Claude if it differs).
+Pairs with `BITBUCKET_USER` = the part of your Vestmark email before the `@` (set automatically —
+Bitbucket usernames are always the email local-part).
 
 1. Open https://bitbucket.vestmarkeng.com and sign in
 2. Click your avatar (top right) → **Manage account** → left nav **HTTP access tokens**
@@ -98,7 +98,7 @@ under **Manage account → Account settings → Username** and tell Claude if it
 7. In your terminal:
 
 ```bash
-read -rsp 'BITBUCKET_TOKEN: ' BITBUCKET_TOKEN; echo; printf 'export BITBUCKET_TOKEN=%q\n' "$BITBUCKET_TOKEN" >> ~/.pte-tokens
+read -rp 'BITBUCKET_TOKEN: ' BITBUCKET_TOKEN; printf 'export BITBUCKET_TOKEN=%q\n' "$BITBUCKET_TOKEN" >> ~/.pte-tokens
 ```
 
 From now on `git push`/`pull` use this token automatically (the credential helper
@@ -108,7 +108,7 @@ From now on `git push`/`pull` use this token automatically (the credential helpe
 
 ## `JENKINS_TOKEN` — Jenkins pipelines
 
-Pairs with `JENKINS_USER` = your Jenkins login (defaults to your Linux login — step 2 shows the real one).
+Pairs with `JENKINS_USER` = your Jenkins login (defaults to the part of your email before the `@` — step 2 shows the real one).
 
 1. Open https://jenkins.vestmarkeng.com and sign in
 2. Click your name (top right) → **Configure** (direct link: https://jenkins.vestmarkeng.com/me/configure).
@@ -119,7 +119,7 @@ Pairs with `JENKINS_USER` = your Jenkins login (defaults to your Linux login —
 5. In your terminal:
 
 ```bash
-read -rsp 'JENKINS_TOKEN: ' JENKINS_TOKEN; echo; printf 'export JENKINS_TOKEN=%q\n' "$JENKINS_TOKEN" >> ~/.pte-tokens
+read -rp 'JENKINS_TOKEN: ' JENKINS_TOKEN; printf 'export JENKINS_TOKEN=%q\n' "$JENKINS_TOKEN" >> ~/.pte-tokens
 ```
 
 ---
@@ -135,7 +135,7 @@ read -rsp 'JENKINS_TOKEN: ' JENKINS_TOKEN; echo; printf 'export JENKINS_TOKEN=%q
 5. In your terminal:
 
 ```bash
-read -rsp 'SONARQUBE_TOKEN: ' SONARQUBE_TOKEN; echo; printf 'export SONARQUBE_TOKEN=%q\n' "$SONARQUBE_TOKEN" >> ~/.pte-tokens
+read -rp 'SONARQUBE_TOKEN: ' SONARQUBE_TOKEN; printf 'export SONARQUBE_TOKEN=%q\n' "$SONARQUBE_TOKEN" >> ~/.pte-tokens
 ```
 
 ---

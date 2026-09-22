@@ -39,7 +39,7 @@ the `gh` CLI. SSH keys are never generated.
 
 1. **Claude never invokes `sudo`, in any form.** AdminByRequest hangs it without a TTY. Privileged
    and browser-based steps are printed for the user to run in their own terminal.
-2. **Never accept a token in the chat.** Tokens go through `read -rs` in the user's terminal
+2. **Never accept a token in the chat.** Tokens go through `read -rp` in the user's terminal
    (`tokens.md`). If one is pasted here, tell them to revoke and regenerate it.
 3. **One step at a time; wait when it's theirs.** After printing a command or a `tokens.md`
    section, stop and ask with `AskUserQuestion` (header `Waiting`, options exactly:
@@ -128,9 +128,9 @@ section of `tokens.md` (this token is also the git password, so it comes before 
 "$S/check.sh" --reload --probe | grep -iE 'bitbucket'
 ```
 
-`rejected` → re-check permissions/expiry per that section and redo the `read -rsp` line;
-`no response` → network/VPN. Also confirm the `BITBUCKET_USER` default (local username) is their
-Bitbucket login; pass `--bitbucket-user` to 4c/4d if not.
+`rejected` → re-check permissions/expiry per that section and redo the `read -rp` line;
+`no response` → network/VPN. `BITBUCKET_USER` defaults to the email local-part, which is always the Bitbucket username — only pass
+`--bitbucket-user` to 4c/4d if they say theirs differs.
 
 ### 4c. Clone — Claude runs it (only when `HAVE_REPO=no`)
 
@@ -151,7 +151,7 @@ differs from what 4a installed, say so (the user re-runs 4a's command with the r
 ```
 
 Pass `--name/--email` only if Step 3 collected them. Relay the `note:` about `JENKINS_USER`
-defaulting to the local username; re-run with `--jenkins-user` if it differs (it updates the block
+defaulting to the email local-part; re-run with `--jenkins-user` if it differs (it updates the block
 in place).
 
 ### 4e. GitHub — verify, or print the `tokens.md` "GitHub" section and WAIT
@@ -196,12 +196,16 @@ For each of Atlassian → Jenkins → SonarQube that `check.sh` reported missing
 
 ```bash
 "$S/check.sh" --reload --probe
-cd <REPO_ROOT> && ./gradlew --version
+bash -lc 'cd <REPO_ROOT> && echo "JAVA_HOME=$JAVA_HOME" && ./gradlew help -q >/dev/null && echo "gradle: build scripts evaluate OK"'
 ```
 
 `--probe` authenticates every token, git over HTTPS to Bitbucket, the Vestmark GitHub org, and
-the AWS SSO session. `./gradlew --version` proves the wrapper, `JAVA_HOME`, and the certificate
-path without running a Gradle task — do **not** run `assemble`/`compileJava` here.
+the AWS SSO session. The second line is the toolchain proof: `bash -lc` is a **login** shell, so it
+sees exactly what the user will after logging out/in (`~/.profile` → `JAVA_HOME`), and
+`./gradlew help` is the smallest task that evaluates the build scripts — including
+`gradle/java-home.gradle`, which fails with `Unable to determine JAVA_HOME location` if the
+environment is wrong. (`./gradlew --version` does **not** evaluate build scripts and proves
+nothing here.) Do **not** run `assemble`/`compileJava` in this step.
 
 ## Step 5 — Final report
 
@@ -214,18 +218,24 @@ User-space     <ok | failed at step: ...>
 GitHub         <gh logged in, Vestmark org, toolkit installed | pending: ...>
 Claude Code    Bedrock <ok> · plugin <ok> · glean <registered, auth pending | ok> · java-lsp <pending>
 Tokens         <4/4 authenticated | missing: ... | rejected: ...>
-Toolchain      ./gradlew --version <ok: Gradle x, JVM y | failed>
+Toolchain      login-shell JAVA_HOME <path> · ./gradlew help <build scripts evaluate OK | failed>
 
 Tokens skipped: <list, if any> — see tokens.md; then: check.sh --reload --probe
 
-RESTART CLAUDE CODE NOW — the toolkit plugin, docker group, and new env vars only take effect in a new session:
+RESTART NOW — the toolkit plugin, docker group membership, and ~/.profile only take effect at your next LOGIN:
   1. /exit                                   (or Ctrl-D) to leave this session
-  2. close this terminal and open a NEW one  (docker group membership + ~/.profile + ~/.bashrc)
-  3. cd <REPO_ROOT> && claude                first launch from the repo: accept the workspace-trust prompt — it registers the pte-mssql MCP server
+  2. LOG OUT and log back in (or reboot)     a new terminal tab is NOT enough for the docker group or ~/.profile
+  3. open a terminal: cd <REPO_ROOT> && claude
+                                             first launch from the repo: accept the workspace-trust prompt — it registers the pte-mssql MCP server
   4. /setup-java-lsp                         one-time index of the repo (~2 min) — enables java_* navigation tools
   5. /mcp → glean_default → Authenticate     Okta login in the browser — enables Glean search
 
-Then:          ./gradlew assemble   (full build + local deploy — Linux/Ubuntu PTE Setup Guide §8)
+Then build and run PTE, from <REPO_ROOT> (Linux/Ubuntu PTE Setup Guide §8 — the colon and --parallel matter):
+  ./gradlew :assemble --parallel             build; the colon lets Gradle skip unchanged modules on later runs
+  docker compose up -d                       only on newer releases — see the VEST-110795 page linked from §8
+  ./gradlew db_setup                         set up the databases
+  ./gradlew startWildfly                     start the app server (or use the IntelliJ Wildfly run configuration)
+  ./gradlew setupVMAP                        only after http://pte.vm.test:8080/vestmark responds
 Also:          join Slack #ptejava #linux-dev-env-users #claude-pte #engineering · install IntelliJ + a SQL client
 ```
 

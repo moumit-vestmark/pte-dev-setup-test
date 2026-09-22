@@ -21,7 +21,7 @@
 #      MSSQL_* for the pte-mssql MCP (password derived from the repo), and the
 #      ~/.pte-tokens hook + old/new token-name aliases
 #
-# Tokens are NEVER handled here — see SKILL.md "Tokens" for the read -rs recipe
+# Tokens are NEVER handled here — see SKILL.md "Tokens" for the read -rp recipe
 # that writes them to ~/.pte-tokens (mode 600) from a real terminal.
 #
 # Sources: Linux/Ubuntu PTE Setup Guide (James Wang), mcp/pte-mssql/README.md,
@@ -58,6 +58,21 @@ step() { echo "== $* =="; }
 skip() { echo "   skip: $*"; }
 did()  { echo "   done: $*"; }
 note() { echo "   note: $*"; }
+
+# The PTE build variables live in ~/.profile (per the setup guide) so the whole login session —
+# IDEs included — inherits them. But a terminal opened BEFORE the next login is an interactive
+# non-login shell that reads only ~/.bashrc, and the build fails with "Unable to determine
+# JAVA_HOME location" (gradle/java-home.gradle). These lines go at the top of the ~/.bashrc block
+# so such a terminal loads the ~/.profile block itself.
+fallback_lines() {
+  cat <<'EOF'
+# PTE build vars live in ~/.profile so the whole login session (IDEs included) gets them. A terminal
+# opened before the next login has not read ~/.profile yet — load that block here so ./gradlew works now.
+if [ -z "${VIVIPORT_ANT_PROPERTIES_FILE:-}" ] && [ -f "$HOME/.profile" ]; then
+  eval "$(sed -n '/^# >>> pte-provision >>>$/,/^# <<< pte-provision <<<$/p' "$HOME/.profile")"
+fi
+EOF
+}
 
 REPO_ROOT="${REPO_ARG:-${PTE_REPO:-${DEV_HOME:-$HOME/dev}/vestmarkone}}"
 if [[ ! -f "$REPO_ROOT/gradlew" ]]; then
@@ -173,6 +188,10 @@ B_BEGIN="# >>> pte-dev-tooling >>>"
 B_END="# <<< pte-dev-tooling <<<"
 if grep -qF "$B_BEGIN" "$BASHRC" 2>/dev/null; then
   skip "$BASHRC already has a pte-dev-tooling block"
+  if ! grep -qF 'load that block here so ./gradlew works now' "$BASHRC"; then
+    sed -i "/^$B_BEGIN\$/r /dev/stdin" "$BASHRC" < <(fallback_lines)
+    did "added the ~/.profile fallback to the existing block (new terminals get JAVA_HOME before the next login)"
+  fi
   # Re-running with explicit logins updates the defaults inside the existing block in place.
   if [[ -n "$BITBUCKET_LOGIN" ]]; then
     sed -i -E "s|^(export BITBUCKET_USER=\"\\\$\{BITBUCKET_USER:-)[^}]*(\}.*)$|\1${BITBUCKET_LOGIN}\2|" "$BASHRC"
@@ -187,12 +206,16 @@ else
   SA_PASSWORD="$(grep -oP '^startupSaPassword=\K.*' "$REPO_ROOT/gradle.properties" 2>/dev/null | head -1 || true)"
   ATL_USER=""
   [[ "$CURRENT_EMAIL" == *@vestmark.com ]] && ATL_USER="$CURRENT_EMAIL"
-  BITBUCKET_LOGIN="${BITBUCKET_LOGIN:-$USER_NAME}"
-  JENKINS_LOGIN="${JENKINS_LOGIN:-$USER_NAME}"
+  # Bitbucket usernames are always the local part of the Vestmark email (mbhattacharjee@vestmark.com
+  # -> mbhattacharjee); Jenkins is the same AD login in practice. The Linux username is only a last resort.
+  EMAIL_LOCAL="${CURRENT_EMAIL%%@*}"
+  BITBUCKET_LOGIN="${BITBUCKET_LOGIN:-${EMAIL_LOCAL:-$USER_NAME}}"
+  JENKINS_LOGIN="${JENKINS_LOGIN:-${EMAIL_LOCAL:-$USER_NAME}}"
   {
     echo ""
     echo "$B_BEGIN"
     echo "# written by the pte-dev-setup plugin (setup-pte-dev-linux/user-setup.sh) on $(date -I)"
+    fallback_lines
     echo 'export PATH="$HOME/.local/bin:$PATH"'
     echo '# corporate TLS: make node (Claude Code) and uv trust the system store, which pte-provision.sh seeds with the Zscaler root'
     echo 'export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt'
@@ -226,7 +249,7 @@ else
   } >> "$BASHRC"
   did "appended tooling block to $BASHRC"
   [[ -z "$SA_PASSWORD" && $MSSQL_PW -eq 1 ]] && note "startupSaPassword not found in gradle.properties — set MSSQL_PASSWORD by hand"
-  note "BITBUCKET_USER and JENKINS_USER assumed to be '$USER_NAME' — pass --bitbucket-user / --jenkins-user if your logins differ"
+  note "BITBUCKET_USER='$BITBUCKET_LOGIN' (Bitbucket usernames are always the email local-part); JENKINS_USER='$JENKINS_LOGIN' assumed the same — pass --jenkins-user if yours differs"
 fi
 
 echo ""
