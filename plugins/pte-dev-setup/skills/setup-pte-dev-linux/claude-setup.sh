@@ -4,7 +4,7 @@
 # changes what is missing. Non-privileged; safe to run from inside a Claude
 # Code session (settings are read at the NEXT launch).
 #
-#   .claude/skills/setup-pte-dev-linux/claude-setup.sh [--profile dev-tools] [--force-models]
+#   $CLAUDE_PLUGIN_ROOT/skills/setup-pte-dev-linux/claude-setup.sh [--profile dev-tools] [--force-models]
 #
 # Steps:
 #   1. aws-cli v2       — user-space install to ~/.local/aws-cli if missing (no sudo)

@@ -4,7 +4,7 @@
 # Run this yourself, in a terminal you are sitting at — never through Claude
 # Code's Bash tool (sudo has no TTY there and hangs behind AdminByRequest):
 #
-#   sudo bash .claude/skills/setup-pte-dev-linux/pte-provision.sh "$(whoami)" [--jdk 17|8] [--ca /path/to/ZscalerRoot.crt]
+#   sudo bash $CLAUDE_PLUGIN_ROOT/skills/setup-pte-dev-linux/pte-provision.sh "$(whoami)" [--jdk 17|8] [--ca /path/to/ZscalerRoot.crt]
 #
 # Covers: /etc/hosts, Zscaler CA -> system trust, JDK, Docker CE + group, git, unzip, gh.
 # Git access (Bitbucket and GitHub) is over HTTPS, so no openssh setup is needed.

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # user-setup.sh — the NON-PRIVILEGED half of PTE Linux dev-machine setup.
 #
-# Runs as the normal user (never sudo) from anywhere inside the vestmarkone
-# checkout. Claude Code runs this directly.
+# Runs as the normal user (never sudo) from anywhere; the vestmarkone checkout must
+# already exist (clone-pte.sh) at --repo / $PTE_REPO / ${DEV_HOME:-~/dev}/vestmarkone.
+# Claude Code runs this directly.
 #
-#   .claude/skills/setup-pte-dev-linux/user-setup.sh \
-#       [--name "Full Name"] [--email you@vestmark.com] [--jdk 17|8] \
+#   $CLAUDE_PLUGIN_ROOT/skills/setup-pte-dev-linux/user-setup.sh \
+#       [--repo <path>] [--name "Full Name"] [--email you@vestmark.com] [--jdk 17|8] \
 #       [--bitbucket-user <login>] [--jenkins-user <login>] [--no-mssql-password]
 #
 # What it does (each step idempotent, skips cleanly when already satisfied):
@@ -33,7 +34,7 @@ if [[ $EUID -eq 0 ]]; then
   exit 1
 fi
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+REPO_ARG=""
 NAME=""
 EMAIL=""
 JDK_VERSION=17
@@ -42,6 +43,7 @@ JENKINS_LOGIN=""
 MSSQL_PW=1
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --repo) REPO_ARG="$2"; shift 2 ;;
     --name) NAME="$2"; shift 2 ;;
     --email) EMAIL="$2"; shift 2 ;;
     --jdk) JDK_VERSION="$2"; shift 2 ;;
@@ -56,6 +58,12 @@ step() { echo "== $* =="; }
 skip() { echo "   skip: $*"; }
 did()  { echo "   done: $*"; }
 note() { echo "   note: $*"; }
+
+REPO_ROOT="${REPO_ARG:-${PTE_REPO:-${DEV_HOME:-$HOME/dev}/vestmarkone}}"
+if [[ ! -f "$REPO_ROOT/gradlew" ]]; then
+  echo "FAIL: no vestmarkone checkout at $REPO_ROOT — run clone-pte.sh first, or pass --repo <path>" >&2
+  exit 1
+fi
 
 USER_NAME="${USER:-$(whoami)}"
 BITBUCKET_HOST="https://bitbucket.vestmarkeng.com"
@@ -184,7 +192,7 @@ else
   {
     echo ""
     echo "$B_BEGIN"
-    echo "# written by .claude/skills/setup-pte-dev-linux/user-setup.sh on $(date -I)"
+    echo "# written by the pte-dev-setup plugin (setup-pte-dev-linux/user-setup.sh) on $(date -I)"
     echo 'export PATH="$HOME/.local/bin:$PATH"'
     echo '# corporate TLS: make node (Claude Code) and uv trust the system store, which pte-provision.sh seeds with the Zscaler root'
     echo 'export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt'

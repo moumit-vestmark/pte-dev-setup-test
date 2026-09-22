@@ -23,12 +23,13 @@
 
 set -uo pipefail
 
-PROBE=0; RELOAD=0
-for arg in "$@"; do
-  case "$arg" in
-    --probe) PROBE=1 ;;
-    --reload) RELOAD=1 ;;
-    *) echo "unknown argument: $arg" >&2; exit 2 ;;
+PROBE=0; RELOAD=0; REPO_ARG=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --probe) PROBE=1; shift ;;
+    --reload) RELOAD=1; shift ;;
+    --repo) REPO_ARG="$2"; shift 2 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
@@ -56,7 +57,10 @@ skip() { printf '  SKIP    %s\n' "$*"; }
 sect() { printf '\n[%s]\n' "$*"; }
 priv() { PRIV=1; }
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+# Plugin mode: this script lives in the plugin cache, not in the repo. The checkout is wherever
+# --repo / PTE_REPO / DEV_HOME say — and may not exist yet (clone-pte.sh creates it).
+REPO_ROOT="${REPO_ARG:-${PTE_REPO:-${DEV_HOME:-$HOME/dev}/vestmarkone}}"
+HAVE_REPO=0; [[ -f "$REPO_ROOT/gradlew" ]] && HAVE_REPO=1
 
 # --- platform ---------------------------------------------------------------
 sect platform
@@ -151,18 +155,18 @@ fi
 
 # --- repo / git over HTTPS -----------------------------------------------------------
 sect repo
-if grep -q "rootProject.name *= *'vestmarkone'" "$REPO_ROOT/settings.gradle" 2>/dev/null || [[ -f "$REPO_ROOT/gradlew" ]]; then
-  ok "inside a vestmarkone checkout: $REPO_ROOT"
+if [[ $HAVE_REPO -eq 1 ]]; then
+  ok "vestmarkone checkout at $REPO_ROOT"
+  REMOTE="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
+  if [[ "$REMOTE" == https://* ]]; then
+    ok "origin uses https"
+  elif [[ "$REMOTE" == ssh://* ]]; then
+    warn "origin uses ssh ($REMOTE) — SSH has been unreliable for new hires; user-setup.sh switches it to https"
+  else
+    warn "origin remote unreadable"
+  fi
 else
-  miss "not inside a vestmarkone checkout (looked at $REPO_ROOT)"
-fi
-REMOTE="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
-if [[ "$REMOTE" == https://* ]]; then
-  ok "origin uses https"
-elif [[ "$REMOTE" == ssh://* ]]; then
-  warn "origin uses ssh ($REMOTE) — SSH has been unreliable for new hires; user-setup.sh switches it to https"
-else
-  warn "origin remote unreadable"
+  miss "no vestmarkone checkout at $REPO_ROOT — clone-pte.sh creates it (needs BITBUCKET_TOKEN first)"
 fi
 if git config --global --get credential.https://bitbucket.vestmarkeng.com.helper 2>/dev/null | grep -q BITBUCKET_TOKEN; then
   ok "git credential helper feeds BITBUCKET_USER + BITBUCKET_TOKEN to Bitbucket over https"
@@ -172,7 +176,7 @@ fi
 if [[ $PROBE -eq 1 ]]; then
   if [[ -z "${BITBUCKET_TOKEN:-${BITBUCKET_ACCESS_TOKEN:-}}" ]]; then
     skip "git https auth (BITBUCKET_TOKEN unset)"
-  elif GIT_TERMINAL_PROMPT=0 git -C "$REPO_ROOT" ls-remote --exit-code -q https://bitbucket.vestmarkeng.com/scm/prod/vestmarkone.git HEAD >/dev/null 2>&1; then
+  elif GIT_TERMINAL_PROMPT=0 git ls-remote --exit-code -q https://bitbucket.vestmarkeng.com/scm/prod/vestmarkone.git HEAD >/dev/null 2>&1; then
     ok "git over https authenticates to Bitbucket (ls-remote succeeded without a prompt)"
   else
     miss "git over https rejected — check BITBUCKET_USER is your Bitbucket login and BITBUCKET_TOKEN has Repository read/write"
@@ -363,4 +367,6 @@ echo "SUMMARY missing=$MISSING warn=$WARN"
 echo "PRIVILEGED_NEEDED=$([[ $PRIV -eq 1 ]] && echo yes || echo no)"
 echo "PLATFORM=$PLATFORM"
 echo "WANT_JDK=$WANT_JDK"
+echo "REPO_ROOT=$REPO_ROOT"
+echo "HAVE_REPO=$([[ $HAVE_REPO -eq 1 ]] && echo yes || echo no)"
 exit 0

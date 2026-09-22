@@ -7,6 +7,6 @@
     { "name": "pte-dev-setup",
       "description": "Set up a Linux machine for PTE development end to end",
       "source": "./plugins/pte-dev-setup",
-      "version": "0.1.0" }
+      "version": "0.2.0" }
   ]
 }
